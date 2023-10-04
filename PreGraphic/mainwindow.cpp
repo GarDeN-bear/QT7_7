@@ -19,12 +19,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     series = new QLineSeries(this);
 
-    timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &MainWindow::RcvSignalShowGraph);
-
-    isDataReady = false;
-    isShowGW = true;
-    isDataRecordStart = false;
+    connect(this, &MainWindow::sig_GraphReady, this, &MainWindow::RcvSignalShowGraph);
+    connect(this, &MainWindow::sig_AblePushButton, this, &MainWindow::RcvSignalAblePushButton);
+    connect(this, &MainWindow::sig_DisablePushButton, this, &MainWindow::RcvSignalDisablePushButton);
 }
 
 MainWindow::~MainWindow()
@@ -181,18 +178,13 @@ void MainWindow::DisplayResult(QVector<double> mins, QVector<double> maxs)
     ui->te_Result->append("Второй максимум " + QString::number(maxs.at(1)));
 }
 
-void MainWindow::fillInSeries(QVector<double> resultData)
+void MainWindow::fillInSeries(QVector<double> resultData, int countPoints)
 {
-    countTime = 0;
-    for (int i = 0; i < resultData.size(); ++i)
+    for (int i = 0; i < countPoints; ++i)
     {
         series->append(i, resultData.at(i));
-        if(countTime == 1 || i == resultData.size() - 1)
-        {
-            isDataReady = true;
-            break;
-        }
     }
+    emit sig_GraphReady();
 }
 
 
@@ -219,12 +211,19 @@ void MainWindow::on_pb_path_clicked()
 /****************************************************/
 void MainWindow::on_pb_start_clicked()
 {
+    emit sig_DisablePushButton();
+    series->clear();
+    chart->removeSeries(series);
+    chartView->hide();
+    gw->hide();
+
     //проверка на то, что файл выбран
     if(pathToFile.isEmpty()){
 
         QMessageBox mb;
         mb.setWindowTitle("Ошибка");
         mb.setText("Выберите файл!");
+        sig_AblePushButton();
         mb.exec();
         return;
     }
@@ -259,9 +258,8 @@ void MainWindow::on_pb_start_clicked()
                                                  * Тут необходимо реализовать код наполнения серии
                                                  * и вызов сигнала для отображения графика
                                                  */
-        fillInSeries(res);
+        fillInSeries(res, 1000);
     };
-    timer->start(1000);
     auto result = QtConcurrent::run(read)
             .then(process)
             .then(findMax);
@@ -269,15 +267,32 @@ void MainWindow::on_pb_start_clicked()
 
 void MainWindow::RcvSignalShowGraph()
 {
-    countTime++;
-    if(isDataReady && isShowGW)
-    {
-        chart->addSeries(series);
-        chartView->chart()->createDefaultAxes();
-        gw->show();
-        chartView->show();
-        isShowGW = !isShowGW;
-        timer->stop();
-    }
+    chart->addSeries(series);
+    chart->createDefaultAxes();
+    gw->show();
+    chartView->show();
+    emit sig_AblePushButton();
+}
+
+void MainWindow::RcvSignalAblePushButton()
+{
+    ui->pb_clearResult->setDisabled(false);
+    ui->pb_path->setDisabled(false);
+    ui->pb_start->setDisabled(false);
+}
+
+void MainWindow::RcvSignalDisablePushButton()
+{
+    ui->pb_clearResult->setDisabled(true);
+    ui->pb_path->setDisabled(true);
+    ui->pb_start->setDisabled(true);
+}
+
+void MainWindow::on_pb_clearResult_clicked()
+{
+    series->clear();
+    chartView->hide();
+    gw->hide();
+
 }
 

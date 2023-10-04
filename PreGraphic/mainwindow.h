@@ -39,12 +39,22 @@ public:
     QVector<double> FindMin(QVector<double> resultData);
     //Метод отображает результаты
     void DisplayResult(QVector<double> mins, QVector<double> maxs);
-    void fillInSeries(QVector<double> resultData);
+    void fillInSeries(QVector<double> resultData, int countPoints);
+
+signals:
+    void sig_GraphReady();
+    void sig_AblePushButton();
+    void sig_DisablePushButton();
 
 private slots:
     void on_pb_path_clicked();
     void on_pb_start_clicked();
+    void on_pb_clearResult_clicked();
+
     void RcvSignalShowGraph();
+    void RcvSignalAblePushButton();
+    void RcvSignalDisablePushButton();
+
 
 private:
     Ui::MainWindow *ui;
@@ -60,12 +70,6 @@ private:
     QGridLayout *layout;
     QLineSeries* series;
     GraphWindow* gw;
-
-    QTimer *timer;
-    bool isDataReady;
-    bool isShowGW;
-    bool isDataRecordStart;
-    int countTime = 0;
 
 };
 #endif // MAINWINDOW_H
